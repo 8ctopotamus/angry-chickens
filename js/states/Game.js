@@ -28,6 +28,8 @@ Achicken.GameState = {
     this.sky = this.add.tileSprite(0, 0, this.game.world.width, this.game.world.height, 'sky')
     this.game.world.sendToBack(this.sky)
 
+    this.chickenHUD = this.add.group()
+
     //enemies
     this.enemies = this.add.group()
     this.enemies.enableBody = true
@@ -70,7 +72,7 @@ Achicken.GameState = {
       this.kill()
 
       //update dead enemies
-      //Achicken.GameState
+      Achicken.GameState.updateDeadCount()
     }
   },
   update: function() {
@@ -111,6 +113,10 @@ Achicken.GameState = {
     this.levelData.enemies.forEach(function(enemy) {
       this.createEnemy(enemy)
     }, this)
+
+    this.countDeadEnemies = 0
+    this.totalNumEnemies = this.levelData.enemies.length
+    this.numChickens = 3
   },
   createBlock: function(data) {
     var block = new Phaser.Sprite(this.game, data.x, data.y, data.asset)
@@ -150,6 +156,7 @@ Achicken.GameState = {
     this.chicken = this.add.sprite(this.pole.x, this.pole.y, 'chicken')
     this.chicken.anchor.setTo(0.5)
     this.isChickenReady = true
+    this.refreshStats()
   },
   throwChicken: function() {
     // enable physics
@@ -163,7 +170,43 @@ Achicken.GameState = {
     var diff = Phaser.Point.subtract(this.pole.position, this.chicken.position)
 
     // set chicken velocity according to difference vector
-    this.chicken.body.velocity.x = diff.x * this.SHOOT_FACTOR
-    this.chicken.body.velocity.y = diff.y * this.SHOOT_FACTOR
+    this.chicken.body.velocity.x = Math.abs(diff.x * this.SHOOT_FACTOR)/(diff.x * this.SHOOT_FACTOR) * Math.min(Math.abs(diff.x * this.SHOOT_FACTOR), this.MAX_SPEED_SHOOT)
+    this.chicken.body.velocity.y = Math.abs(diff.y * this.SHOOT_FACTOR)/(diff.y * this.SHOOT_FACTOR) * Math.min(Math.abs(diff.y * this.SHOOT_FACTOR), this.MAX_SPEED_SHOOT)
+
+    this.endTurn()
+  },
+  updateDeadCount: function() {
+    this.countDeadEnemies++
+    if (this.countDeadEnemies == this.totalNumEnemies) {
+      alert('You won!')
+      this.gameOver()
+    }
+  },
+  endTurn: function() {
+    this.numChickens--
+
+    this.game.time.events.add(3 * Phaser.Timer.SECOND, function() {
+      this.chicken.kill()
+
+      // show a new chicken 1 second later
+      this.game.time.events.add(Phaser.Timer.SECOND, function() {
+        // if there are no more chickens, game over
+        if (this.numChickens > 0) {
+          this.setupChicken()
+        } else {
+          alert('Out of chickens!')
+          this.gameOver()
+        }
+      }, this)
+    }, this)
+  },
+  refreshStats: function() {
+    this.chickenHUD.removeAll()
+
+    var i = 0
+    while(i < this.numChickens) {
+      i++
+      this.chickenHUD.create(this.game.width - 100 - i * 80, 30, 'chicken')
+    }
   }
 }
